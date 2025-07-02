@@ -43,34 +43,34 @@ export const addSubjectWords = async (req: Request, res: Response) => {
 };
 
 // Get subject words with their meaning
-export const getSubjectWords = async (
-  subject: string,
-  page: number,
-  limit: number
-) => {
-  if (!subject) {
-    throw new Error("Subject is required.");
-  }
+// export const getSubjectWords = async (
+//   subject: string,
+//   page: number,
+//   limit: number
+// ) => {
+//   if (!subject) {
+//     throw new Error("Subject is required.");
+//   }
 
-  const result = await SubjectWords.findOne({
-    subject: new RegExp(`^${subject}$`, "i"),
-  });
+//   const result = await SubjectWords.findOne({
+//     subject: new RegExp(`^${subject}$`, "i"),
+//   });
 
-  if (!result) {
-    throw new Error("Subject not found.");
-  }
+//   if (!result) {
+//     throw new Error("Subject not found.");
+//   }
 
-  const startIndex = (page - 1) * limit;
-  const paginatedWords = result.words.slice(startIndex, startIndex + limit);
+//   const startIndex = (page - 1) * limit;
+//   const paginatedWords = result.words.slice(startIndex, startIndex + limit);
 
-  return {
-    subject: result.subject,
-    totalWords: result.words.length,
-    page,
-    totalPages: Math.ceil(result.words.length / limit),
-    words: paginatedWords,
-  };
-};
+//   return {
+//     subject: result.subject,
+//     totalWords: result.words.length,
+//     page,
+//     totalPages: Math.ceil(result.words.length / limit),
+//     words: paginatedWords,
+//   };
+// };
 
 export const uploadSubjectWords = async (
   subject: string,
@@ -388,3 +388,35 @@ async function getWordDetailsInContext(word: string, subject: string) {
     };
   }
 }
+
+export const getSubjectWords = async (
+  subject: string,
+  page: number,
+  limit: number
+) => {
+  if (!subject) throw new Error("Exam is required.");
+
+  const result = await SubjectWords.findOne({
+    subject: new RegExp(`^${subject}$`, "i"),
+  });
+
+  if (!result) throw new Error("Exam not found.");
+
+  const startIndex = (page - 1) * limit;
+
+  // Just return word + meaning
+  const paginatedWords = result.words
+    .slice(startIndex, startIndex + limit)
+    .map((item: any) => ({
+      word: item.word,
+      meaning: item.meaning,
+    }));
+
+  return {
+    subject: result.subject,
+    totalWords: result.words.length,
+    page,
+    totalPages: Math.ceil(result.words.length / limit),
+    words: paginatedWords, // simplified array
+  };
+};

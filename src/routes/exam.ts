@@ -5,11 +5,41 @@ import fs from "fs";
 import {
   generateImageForExam,
   assignImageToExamWord,
+  getExamWords,
 } from "../services/examWord";
 import ExamWords from "../models/examWords";
 
 const upload = multer({ dest: "uploads/" });
 const router = express.Router();
+
+router.get("/", async (req, res) => {
+  try {
+    const fullUrl = new URL(
+      req.protocol + "://" + req.get("host") + req.originalUrl
+    );
+    const exam = fullUrl.searchParams.get("exam") || "act";
+    const page = parseInt(fullUrl.searchParams.get("page") || "1");
+    const limit = parseInt(fullUrl.searchParams.get("limit") || "10");
+
+    if (!exam) {
+      res.status(400).json({ success: false, error: "Exam is required." });
+      return;
+    }
+
+    const data = await getExamWords(exam, page, limit);
+
+    res.status(200).json({ success: true, ...data });
+    return;
+  } catch (err: any) {
+    console.error("❌ API error:", err.message);
+    const status = err.message.includes("not found") ? 404 : 500;
+    res.status(status).json({
+      success: false,
+      error: err.message || "Server error.",
+    });
+    return;
+  }
+});
 
 router.post("/upload", upload.single("file"), async (req, res) => {
   try {
@@ -31,20 +61,26 @@ router.post("/upload", upload.single("file"), async (req, res) => {
     }
 
     const content = fs.readFileSync(file.path, "utf-8");
-    const wordList = content
+    const wordListRaw = content
       .split(/\r?\n/)
       .map((line) => line.trim())
       .filter(Boolean);
 
-    if (wordList.length === 0) {
+    if (wordListRaw.length === 0) {
       fs.unlinkSync(file.path);
       res.status(400).json({ error: "No valid words found in the file." });
       return;
     }
+    const seen = new Set<string>();
+    const wordList = wordListRaw.filter((word) => {
+      const lower = word.toLowerCase();
+      if (seen.has(lower)) return false;
+      seen.add(lower);
+      return true;
+    });
+    const generationData = await generateImageForExam(exam, wordList);
+    const assignmentData = await assignImageToExamWord(exam, wordList);
 
-    const generationData = await generateImageForExam(exam, wordList); // generate image
-    const assignmentData = await assignImageToExamWord(exam, wordList); //assign image  okay sir
-// sir yeh agar ab aap run kroge then signle api se ho jayega
     fs.unlinkSync(file.path);
 
     res.status(200).json({ success: true, data: generationData });

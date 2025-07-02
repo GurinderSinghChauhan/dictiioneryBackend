@@ -267,3 +267,35 @@ const waitForImageFilename = async (
   }
   return null;
 };
+
+export const getGradeWords = async (
+  grade: string,
+  page: number,
+  limit: number
+) => {
+  if (!grade) throw new Error("Exam is required.");
+
+  const result = await GradeWords.findOne({
+    grade: new RegExp(`^${grade}$`, "i"),
+  });
+
+  if (!result) throw new Error("Exam not found.");
+
+  const startIndex = (page - 1) * limit;
+
+  // Just return word + meaning
+  const paginatedWords = result.words
+    .slice(startIndex, startIndex + limit)
+    .map((item: any) => ({
+      word: item.word,
+      meaning: item.meaning,
+    }));
+
+  return {
+    grade: result.grade,
+    totalWords: result.words.length,
+    page,
+    totalPages: Math.ceil(result.words.length / limit),
+    words: paginatedWords, // simplified array
+  };
+};

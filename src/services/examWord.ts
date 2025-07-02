@@ -175,3 +175,35 @@ async function waitForImageFilename(promptId: string, retries = 150, delay = 400
   }
   return null;
 }
+
+export const getExamWords = async (
+  exam: string,
+  page: number,
+  limit: number
+) => {
+  if (!exam) throw new Error("Exam is required.");
+
+  const result = await ExamWords.findOne({
+    exam: new RegExp(`^${exam}$`, "i"),
+  });
+
+  if (!result) throw new Error("Exam not found.");
+
+  const startIndex = (page - 1) * limit;
+
+  // Just return word + meaning
+  const paginatedWords = result.words
+    .slice(startIndex, startIndex + limit)
+    .map((item: any) => ({
+      word: item.word,
+      meaning: item.meaning,
+    }));
+
+  return {
+    exam: result.exam,
+    totalWords: result.words.length,
+    page,
+    totalPages: Math.ceil(result.words.length / limit),
+    words: paginatedWords, // simplified array
+  };
+};

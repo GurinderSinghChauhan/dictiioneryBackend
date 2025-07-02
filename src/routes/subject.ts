@@ -67,20 +67,28 @@ router.post("/upload", upload.single("file"), async (req, res) => {
 
     // Read file content and extract word list
     const content = fs.readFileSync(file.path, "utf-8");
-    const words = content
+    const wordListRaw = content
       .split(/\r?\n/)
       .map((line) => line.trim())
       .filter((line) => line);
 
-    if (words.length === 0) {
+    const seen = new Set<string>();
+    const wordList = wordListRaw.filter((word) => {
+      const lower = word.toLowerCase();
+      if (seen.has(lower)) return false;
+      seen.add(lower);
+      return true;
+    });
+
+    if (wordList.length === 0) {
       fs.unlinkSync(file.path);
       res.status(400).json({ error: "No valid words found in the file." });
       return;
     }
 
     // Call uploadSubjectWords with subject and list of words
-    const data = await generateImageForSubject(subject, words);
-
+    const data = await generateImageForSubject(subject, wordList);
+    const assignmentData = await assignImageToSubjectWord(subject, wordList);
     // Delete the uploaded file after processing
     fs.unlinkSync(file.path);
 
@@ -124,6 +132,35 @@ router.post("/assign", upload.single("file"), async (req, res) => {
   } catch (err) {
     console.error("❌ Error uploading subject words:", err);
     res.status(500).json({ error: "Server error." });
+  }
+});
+
+router.get("/", async (req, res) => {
+  try {
+    const fullUrl = new URL(
+      req.protocol + "://" + req.get("host") + req.originalUrl
+    );
+    const subject = fullUrl.searchParams.get("subject") || "act";
+    const page = parseInt(fullUrl.searchParams.get("page") || "1");
+    const limit = parseInt(fullUrl.searchParams.get("limit") || "10");
+
+    if (!subject) {
+      res.status(400).json({ success: false, error: "Exam is required." });
+      return;
+    }
+
+    const data = await getSubjectWords(subject, page, limit);
+
+    res.status(200).json({ success: true, ...data });
+    return;
+  } catch (err: any) {
+    console.error("❌ API error:", err.message);
+    const status = err.message.includes("not found") ? 404 : 500;
+    res.status(status).json({
+      success: false,
+      error: err.message || "Server error.",
+    });
+    return;
   }
 });
 
