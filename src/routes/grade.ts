@@ -46,6 +46,7 @@ router.post("/upload", upload.single("file"), async (req, res) => {
       return true;
     });
 
+    
     if (wordList.length === 0) {
       fs.unlinkSync(file.path);
       res.status(400).json({ error: "No valid words found in the file." });
@@ -53,7 +54,7 @@ router.post("/upload", upload.single("file"), async (req, res) => {
     }
 
     // Process word list to generate images and metadata
-    const data = await generateImageForGrade(grade, wordList);
+    const data = await generateImageForGrade(grade, wordList, req.body.promptStyle || "positivePrompt");
     const dataImageAssignment = await assignImageToGradeWord(grade, wordList);
 
     fs.unlinkSync(file.path); // Clean up uploaded file

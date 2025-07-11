@@ -78,7 +78,7 @@ router.post("/upload", upload.single("file"), async (req, res) => {
       seen.add(lower);
       return true;
     });
-    const generationData = await generateImageForExam(exam, wordList);
+    const generationData = await generateImageForExam(exam, wordList, req.body.promptStyle || "positivePrompt");
     const assignmentData = await assignImageToExamWord(exam, wordList);
 
     fs.unlinkSync(file.path);

@@ -234,4 +234,4 @@ app.use("/auth", authRoutes);
 
 app.use("/exam", examRouter);
 
-app.use("/admin/allWords", allWordsRoutes);
+app.use("/words", allWordsRoutes);

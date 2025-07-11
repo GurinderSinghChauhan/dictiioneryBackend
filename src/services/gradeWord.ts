@@ -14,10 +14,11 @@ const openai = new OpenAI({
 
 export const generateImageForGrade = async (
   grade: string,
-  wordList: string[]
+  wordList: string[],
+  promptStyle: "meaning" | "exampleSentence" | "positivePrompt"
 ) => {
   try {
-    console.log("🔍 Starting image generation for grade:", grade);
+    console.log("🔍 Starting image generation for grade:", grade, promptStyle);
     console.log("📜 Received word list:", wordList);
 
     const cleanedWords = wordList
@@ -53,8 +54,15 @@ export const generateImageForGrade = async (
           continue;
         }
 
-        const promptId = await sendPromptAPI(wordDetails.meaning ?? "");
-        console.log(`df Prompt ID received for new word "${term}":`, wordDetails.meaning);
+        const promptId = await sendPromptAPI(
+          promptStyle
+            ? wordDetails[promptStyle]
+            : wordDetails.positivePrompt ?? ""
+        );
+        console.log(
+          `df Prompt ID received for new word "${term}":`,
+          wordDetails.meaning
+        );
 
         const newWord = {
           ...wordDetails,
@@ -83,7 +91,11 @@ export const generateImageForGrade = async (
       }
 
       console.log(`📤 Sending prompt for "${term}"...`);
-      const promptId = await sendPromptAPI(existingWord.meaning ?? "");
+      const promptId = await sendPromptAPI(
+        promptStyle
+          ? existingWord[promptStyle]
+          : existingWord.positivePrompt ?? ""
+      );
       console.log(`✅ Prompt ID received for "${term}":`, existingWord.meaning);
 
       existingWord.promptId = promptId;

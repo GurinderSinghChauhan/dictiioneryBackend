@@ -10,11 +10,17 @@ import { WordDetails } from "./wordServices";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-export const generateImageForExam = async (exam: string, wordList: string[]) => {
+export const generateImageForExam = async (
+  exam: string,
+  wordList: string[],
+  promptStyle: "meaning" | "exampleSentence" | "positivePrompt"
+) => {
   try {
     console.log("🔍 Starting image generation for exam:", exam);
 
-    const cleanedWords = wordList.map((w) => w.trim().toLowerCase()).filter(Boolean);
+    const cleanedWords = wordList
+      .map((w) => w.trim().toLowerCase())
+      .filter(Boolean);
 
     let examEntry = await ExamWords.findOne({
       exam: new RegExp(`^${exam}$`, "i"),
@@ -38,7 +44,9 @@ export const generateImageForExam = async (exam: string, wordList: string[]) => 
           continue;
         }
 
-        const promptId = await sendPromptAPI(wordDetails.meaning ?? "");
+        const promptId = await sendPromptAPI(
+          promptStyle ? wordDetails[promptStyle] : wordDetails.positivePrompt
+        );
 
         const newWord = {
           ...wordDetails,
@@ -52,11 +60,17 @@ export const generateImageForExam = async (exam: string, wordList: string[]) => 
       }
 
       if (existingWord.imageURL) {
-        results.push({ term, result: { word: existingWord.word }, promptId: existingWord.promptId || null });
+        results.push({
+          term,
+          result: { word: existingWord.word },
+          promptId: existingWord.promptId || null,
+        });
         continue;
       }
 
-      const promptId = await sendPromptAPI(existingWord.meaning ?? "");
+      const promptId = await sendPromptAPI(
+        promptStyle ? existingWord[promptStyle] : existingWord.positivePrompt
+      );
       existingWord.promptId = promptId;
       results.push({ term, result: { word: existingWord.word }, promptId });
     }
@@ -69,11 +83,16 @@ export const generateImageForExam = async (exam: string, wordList: string[]) => 
   }
 };
 
-export const assignImageToExamWord = async (exam: string, wordList: string[]) => {
+export const assignImageToExamWord = async (
+  exam: string,
+  wordList: string[]
+) => {
   try {
     const results: any[] = [];
 
-    const examDoc = await ExamWords.findOne({ exam: new RegExp(`^${exam}$`, "i") });
+    const examDoc = await ExamWords.findOne({
+      exam: new RegExp(`^${exam}$`, "i"),
+    });
     if (!examDoc) throw new Error(`Exam "${exam}" not found`);
 
     for (const word of wordList) {
@@ -82,7 +101,11 @@ export const assignImageToExamWord = async (exam: string, wordList: string[]) =>
       );
 
       if (!wordObj || wordObj.imageURL) {
-        results.push({ word, status: "skipped", reason: "Image already exists or word not found" });
+        results.push({
+          word,
+          status: "skipped",
+          reason: "Image already exists or word not found",
+        });
         continue;
       }
 
@@ -99,7 +122,11 @@ export const assignImageToExamWord = async (exam: string, wordList: string[]) =>
 
       const imageURL = await getImage(filename);
       if (!imageURL) {
-        results.push({ word, status: "failed", reason: "Failed to retrieve image URL" });
+        results.push({
+          word,
+          status: "failed",
+          reason: "Failed to retrieve image URL",
+        });
         continue;
       }
 
@@ -156,7 +183,9 @@ async function getWordDetailsInContext(word: string, context: string) {
   });
 
   try {
-    const data: WordDetails = JSON.parse(response.choices[0].message.content || "{}");
+    const data: WordDetails = JSON.parse(
+      response.choices[0].message.content || "{}"
+    );
     return data;
   } catch (err) {
     console.error("❌ Failed to parse OpenAI response:", err);
@@ -164,7 +193,11 @@ async function getWordDetailsInContext(word: string, context: string) {
   }
 }
 
-async function waitForImageFilename(promptId: string, retries = 150, delay = 4000): Promise<string | null> {
+async function waitForImageFilename(
+  promptId: string,
+  retries = 150,
+  delay = 4000
+): Promise<string | null> {
   for (let i = 0; i < retries; i++) {
     const history = await getPromptHistory(promptId);
     const outputNode = history?.[promptId]?.outputs?.["9"];

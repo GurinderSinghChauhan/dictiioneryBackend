@@ -129,10 +129,11 @@ export const uploadSubjectWords = async (
 
 export const generateImageForSubject = async (
   subject: string,
-  wordList: string[]
+  wordList: string[],
+  promptStyle: "meaning" | "exampleSentence" | "positivePrompt"
 ) => {
   try {
-    console.log("🔍 Starting image generation for subject:", subject);
+    console.log("🔍 Starting image generation for subject:", subject, promptStyle);
     console.log("📜 Received word list:", wordList);
 
     const cleanedWords = wordList
@@ -165,7 +166,8 @@ export const generateImageForSubject = async (
 
         let context = subject;
         if (subject.toLowerCase() === "english") context = "English literature";
-        else if (subject.toLowerCase() === "political") context = "Political science";
+        else if (subject.toLowerCase() === "political")
+          context = "Political science";
 
         const wordDetails = await getWordDetailsInContext(term, context);
         if (!wordDetails) {
@@ -174,7 +176,9 @@ export const generateImageForSubject = async (
           continue;
         }
 
-        const promptId = await sendPromptAPI(wordDetails.meaning ?? "");
+        const promptId = await sendPromptAPI(
+          promptStyle ? wordDetails[promptStyle] : wordDetails.meaning ?? ""
+        );
         console.log(`✅ Prompt ID for "${term}":`, promptId);
 
         const newWord = {
@@ -204,7 +208,11 @@ export const generateImageForSubject = async (
       }
 
       console.log(`📤 Sending prompt for "${term}"...`);
-      const promptId = await sendPromptAPI(existingWord.meaning ?? "");
+      const promptId = await sendPromptAPI(
+        (existingWord[
+          (promptStyle as keyof WordDetails) ?? "meaning"
+        ] as string) || ""
+      );
       console.log(`✅ Prompt ID for "${term}":`, promptId);
 
       existingWord.promptId = promptId;

@@ -3,7 +3,7 @@ import PromptJSON from "../mock/prompt.json";
 import AWS from "aws-sdk";
 import dotenv from "dotenv";
 
-const comfyURL = 'https://aa93-34-66-176-12.ngrok-free.app'
+const comfyURL = 'http://127.0.0.1:8188'
 
 dotenv.config();
 

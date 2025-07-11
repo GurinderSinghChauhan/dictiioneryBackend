@@ -87,7 +87,7 @@ router.post("/upload", upload.single("file"), async (req, res) => {
     }
 
     // Call uploadSubjectWords with subject and list of words
-    const data = await generateImageForSubject(subject, wordList);
+    const data = await generateImageForSubject(subject, wordList, req.body.promptStyle);
     const assignmentData = await assignImageToSubjectWord(subject, wordList);
     // Delete the uploaded file after processing
     fs.unlinkSync(file.path);
